@@ -1,0 +1,16 @@
+server:
+  port: 8081
+
+# limit size of received files
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# log everything
+logging:
+  level:
+    root=debug:
+

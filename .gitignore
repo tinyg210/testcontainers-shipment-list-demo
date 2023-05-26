@@ -65,3 +65,4 @@ setup/terraform/terraform.tfstate.backup
 # lambda module
 /shipment-picture-lambda-validator/.idea
 /shipment-picture-lambda-validator/target/
+/volume/
