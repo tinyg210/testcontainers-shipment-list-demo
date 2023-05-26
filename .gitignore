@@ -1,0 +1,67 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Frontend ###
+
+# dependencies
+src/main/shipment-list-frontend/node_modules
+src/main/shipment-list-frontend/.pnp
+src/main/shipment-list-frontend/.pnp.js
+
+# testing
+src/main/shipment-list-frontend/coverage
+
+# production
+src/main/shipment-list-frontend/build
+
+# misc
+src/main/shipment-list-frontend/.DS_Store
+src/main/shipment-list-frontend/.env.local
+src/main/shipment-list-frontend/.env.development.local
+src/main/shipment-list-frontend/.env.test.local
+src/main/shipment-list-frontend/.env.production.local
+
+src/main/shipment-list-frontend/npm-debug.log*
+src/main/shipment-list-frontend/yarn-debug.log*
+src/main/shipment-list-frontend/yarn-error.log*
+
+# terraform
+
+setup/terraform/terraform.tfstate
+setup/terraform/.terraform.lock.hcl
+setup/terraform/terraform.tfstate.backup
+
+# lambda module
+/shipment-picture-lambda-validator/.idea
+/shipment-picture-lambda-validator/target/
