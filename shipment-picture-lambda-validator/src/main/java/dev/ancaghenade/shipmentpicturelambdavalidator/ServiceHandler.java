@@ -14,9 +14,11 @@ import java.util.List;
 import java.util.Objects;
 import javax.imageio.ImageIO;
 import org.apache.http.entity.ContentType;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
@@ -45,14 +47,22 @@ public class ServiceHandler implements RequestStreamHandler {
 
     context.getLogger().log("Object key: " + objectKey);
 
-    var getObjectRequest = GetObjectRequest.builder()
-        .bucket(BUCKET_NAME)
-        .key(objectKey)
-        .build();
+      var getObjectRequest = GetObjectRequest.builder()
+          .bucket(BUCKET_NAME)
+          .key(objectKey)
+          .build();
 
-    var s3ObjectResponse = s3Client.getObject(
+
+    ResponseInputStream<GetObjectResponse> s3ObjectResponse;
+    try {
+      s3ObjectResponse = s3Client.getObject(
         getObjectRequest);
-
+    } catch (Exception e) {
+      context.getLogger().log("Fails on first call - potential connectivity issues");
+      e.printStackTrace();
+      context.getLogger().log(e.getMessage());
+      return;
+    }
     context.getLogger().log("Object fetched");
 
     // Check if the image was already processed
