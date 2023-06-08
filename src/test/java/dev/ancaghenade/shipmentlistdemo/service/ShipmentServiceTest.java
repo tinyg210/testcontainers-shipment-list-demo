@@ -25,7 +25,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
@@ -187,7 +186,16 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
     }
   }
 
+  @Test
+  @Order(8)
+  void testSQSMessage() {
 
+    String url = "/push-endpoint";
+    // set the request headers
+    ResponseEntity<String> responseEntity = restTemplate.exchange(BASE_URL + url,
+        HttpMethod.GET, null, String.class);
+    assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
 
+  }
 
 }

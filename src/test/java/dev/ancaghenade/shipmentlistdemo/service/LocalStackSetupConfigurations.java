@@ -1,14 +1,12 @@
 package dev.ancaghenade.shipmentlistdemo.service;
 
 import dev.ancaghenade.shipmentlistdemo.buckets.BucketName;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
@@ -38,7 +36,6 @@ import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.AttachRolePolicyRequest;
 import software.amazon.awssdk.services.iam.model.CreateRoleRequest;
 import software.amazon.awssdk.services.iam.model.GetRoleRequest;
-import software.amazon.awssdk.services.iam.model.GetRoleResponse;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.AddPermissionRequest;
 import software.amazon.awssdk.services.lambda.model.CreateFunctionRequest;
@@ -56,7 +53,6 @@ import software.amazon.awssdk.services.sns.model.SubscribeRequest;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
-import software.amazon.awssdk.services.sqs.model.GetQueueAttributesResponse;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 
 public class LocalStackSetupConfigurations {
@@ -75,8 +71,8 @@ public class LocalStackSetupConfigurations {
           .withEnv("DNS_ADDRESS", "1")
           .withEnv("DEBUG", "1");
   private static Region region = Region.of(localStack.getRegion());
-  private static S3Client s3Client;
-  private static DynamoDbClient dynamoDbClient;
+  protected static S3Client s3Client;
+  protected static DynamoDbClient dynamoDbClient;
   private static LambdaClient lambdaClient;
   private static SqsClient sqsClient;
   private static SnsClient snsClient;
@@ -130,13 +126,6 @@ public class LocalStackSetupConfigurations {
         .endpointOverride(localStack.getEndpointOverride(Service.IAM))
         .build();
 
-    S3Client.builder();
-
-    Properties props = new Properties();
-    FileInputStream fis = new FileInputStream("src/test/java/resources/commands.properties");
-    props.load(fis);
-    fis.close();
-
     createS3Bucket();
     createIAMRole();
     createDynamoDBResources();
@@ -146,8 +135,6 @@ public class LocalStackSetupConfigurations {
     createSQS();
     createSNSSubscription();
 
-    s3Client.close();
-    dynamoDbClient.close();
     lambdaClient.close();
     snsClient.close();
     sqsClient.close();
@@ -155,28 +142,21 @@ public class LocalStackSetupConfigurations {
   }
 
   private static void createIAMRole() {
-    String roleName = "lambda_exec_role";
-    String assumeRolePolicyDocument = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}";
+    var roleName = "lambda_exec_role";
+    var assumeRolePolicyDocument = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}";
 
     iamClient.createRole(CreateRoleRequest.builder()
         .roleName(roleName)
         .assumeRolePolicyDocument(assumeRolePolicyDocument)
         .build());
 
-    String policyArn1 = "arn:aws:iam::aws:policy/AmazonS3FullAccess";
-//      String policyArn2 = "arn:aws:iam::aws:policy/AWSLambda_FullAccess";
+    var policyArn1 = "arn:aws:iam::aws:policy/AmazonS3FullAccess";
 
     iamClient.attachRolePolicy(
         AttachRolePolicyRequest.builder()
             .roleName(roleName)
             .policyArn(policyArn1)
             .build());
-
-//    iamClient.attachRolePolicy(
-//        AttachRolePolicyRequest.builder()
-//            .roleName(roleName)
-//            .policyArn(policyArn2)
-//            .build());
 
   }
 
@@ -189,15 +169,15 @@ public class LocalStackSetupConfigurations {
     // Get the queue URL
     String queueName = "update_shipment_picture_queue";
 
-    GetQueueAttributesRequest request = GetQueueAttributesRequest.builder()
+    var request = GetQueueAttributesRequest.builder()
         .queueUrl(getQueueUrl(sqsClient, queueName))
         .attributeNames(QueueAttributeName.QUEUE_ARN)
         .build();
 
-    GetQueueAttributesResponse response = sqsClient.getQueueAttributes(request);
+    var response = sqsClient.getQueueAttributes(request);
     String queueArn = response.attributes().get(QueueAttributeName.QUEUE_ARN);
 
-    SubscribeRequest subscribeRequest = SubscribeRequest.builder()
+    var subscribeRequest = SubscribeRequest.builder()
         .topicArn(topicArn)
         .protocol("sqs")
         .endpoint(queueArn)
@@ -207,9 +187,9 @@ public class LocalStackSetupConfigurations {
   }
 
   private static void createSQS() {
-    String queueName = "update_shipment_picture_queue";
+    var queueName = "update_shipment_picture_queue";
 
-    CreateQueueRequest request = CreateQueueRequest.builder()
+    var request = CreateQueueRequest.builder()
         .queueName(queueName)
         .build();
 
@@ -217,9 +197,9 @@ public class LocalStackSetupConfigurations {
   }
 
   private static void createSNS() {
-    String topicName = "update_shipment_picture_topic";
+    var topicName = "update_shipment_picture_topic";
 
-    CreateTopicRequest request = CreateTopicRequest.builder()
+    var request = CreateTopicRequest.builder()
         .name(topicName)
         .build();
 
@@ -229,10 +209,10 @@ public class LocalStackSetupConfigurations {
   private static void createBucketNotificationConfiguration()
       throws IOException, InterruptedException {
 
-    ExecResult result = localStack.execInContainer(formatCommand(
+    var result = localStack.execInContainer(formatCommand(
         "awslocal lambda get-function --function-name shipment-picture-lambda-validator"));
-    JSONObject obj = new JSONObject(result.getStdout()).getJSONObject("Configuration");
-    String state = obj.getString("State");
+    var obj = new JSONObject(result.getStdout()).getJSONObject("Configuration");
+    var state = obj.getString("State");
     while (!state.equals("Active")) {
       result = localStack.execInContainer(formatCommand(
           "awslocal lambda get-function --function-name shipment-picture-lambda-validator"));
@@ -240,7 +220,7 @@ public class LocalStackSetupConfigurations {
       state = obj.getString("State");
     }
 
-    NotificationConfiguration notificationConfiguration = NotificationConfiguration.builder()
+    var notificationConfiguration = NotificationConfiguration.builder()
         .lambdaFunctionConfigurations(
             LambdaFunctionConfiguration.builder().id("shipment-picture-lambda-validator")
                 .lambdaFunctionArn(
@@ -249,7 +229,7 @@ public class LocalStackSetupConfigurations {
                 .events(Event.S3_OBJECT_CREATED).build()).build();
 
     // Create the request
-    PutBucketNotificationConfigurationRequest request = PutBucketNotificationConfigurationRequest.builder()
+    var request = PutBucketNotificationConfigurationRequest.builder()
         .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
         .notificationConfiguration(notificationConfiguration)
         .build();
@@ -259,30 +239,30 @@ public class LocalStackSetupConfigurations {
   }
 
   private static void createLambdaResources() {
-    String functionName = "shipment-picture-lambda-validator";
-    String runtime = "java11";
-    String handler = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest";
-    String zipFilePath = "shipment-picture-lambda-validator/target/shipment-picture-lambda-validator.jar";
-    String sourceArn = "arn:aws:s3:000000000000:shipment-picture-bucket";
-    String statementId = "AllowExecutionFromS3Bucket";
-    String action = "lambda:InvokeFunction";
-    String principal = "s3.amazonaws.com";
+    var functionName = "shipment-picture-lambda-validator";
+    var runtime = "java11";
+    var handler = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest";
+    var zipFilePath = "shipment-picture-lambda-validator/target/shipment-picture-lambda-validator.jar";
+    var sourceArn = "arn:aws:s3:000000000000:shipment-picture-bucket";
+    var statementId = "AllowExecutionFromS3Bucket";
+    var action = "lambda:InvokeFunction";
+    var principal = "s3.amazonaws.com";
 
-    GetRoleResponse getRoleResponse = iamClient.getRole(GetRoleRequest.builder()
+    var getRoleResponse = iamClient.getRole(GetRoleRequest.builder()
         .roleName("lambda_exec_role")
         .build());
 
-    String roleArn = getRoleResponse.role().arn();
+    var roleArn = getRoleResponse.role().arn();
 
     try {
-      byte[] zipFileBytes = Files.readAllBytes(Paths.get(zipFilePath));
-      ByteBuffer zipFileBuffer = ByteBuffer.wrap(zipFileBytes);
+      var zipFileBytes = Files.readAllBytes(Paths.get(zipFilePath));
+      var zipFileBuffer = ByteBuffer.wrap(zipFileBytes);
 
       var env = new HashMap<String, String>();
       env.put("ENVIRONMENT", "dev");
       env.put("s3.endpoint", String.valueOf(localStack.getMappedPort(4566)));
 
-      CreateFunctionRequest createFunctionRequest = CreateFunctionRequest.builder()
+      var createFunctionRequest = CreateFunctionRequest.builder()
           .functionName(functionName)
           .runtime(runtime)
           .handler(handler)
@@ -296,7 +276,7 @@ public class LocalStackSetupConfigurations {
       lambdaClient.createFunction(
           createFunctionRequest);
 
-      AddPermissionRequest request = AddPermissionRequest.builder()
+      var request = AddPermissionRequest.builder()
           .functionName(functionName)
           .statementId(statementId)
           .action(action)
@@ -316,22 +296,22 @@ public class LocalStackSetupConfigurations {
   private static void createDynamoDBResources() {
 
     // table name
-    String tableName = "shipment";
+    var tableName = "shipment";
 
     // attribute definitions
-    AttributeDefinition attributeDefinition = AttributeDefinition.builder()
+    var attributeDefinition = AttributeDefinition.builder()
         .attributeName("shipmentId")
         .attributeType(ScalarAttributeType.S)
         .build();
 
     // create key schema
-    KeySchemaElement keySchemaElement = KeySchemaElement.builder()
+    var keySchemaElement = KeySchemaElement.builder()
         .attributeName("shipmentId")
         .keyType(KeyType.HASH)
         .build();
 
     // CreateTableRequest with table name, attribute definitions, key schema, and billing mode
-    CreateTableRequest createTableRequest = CreateTableRequest.builder()
+    var createTableRequest = CreateTableRequest.builder()
         .tableName(tableName)
         .attributeDefinitions(attributeDefinition)
         .keySchema(keySchemaElement)
@@ -342,13 +322,13 @@ public class LocalStackSetupConfigurations {
     dynamoDbClient.createTable(createTableRequest);
 
     // Create attribute values for the item
-    AttributeValue shipmentId = AttributeValue.builder().s("3317ac4f-1f9b-4bab-a974-4aa9876d5547")
+    var shipmentId = AttributeValue.builder().s("3317ac4f-1f9b-4bab-a974-4aa9876d5547")
         .build();
-    AttributeValue recipientName = AttributeValue.builder().s("Harry Potter").build();
+    var recipientName = AttributeValue.builder().s("Harry Potter").build();
     // Add other attributes as needed
 
     // Create a map to hold the item attribute values
-    Map<String, AttributeValue> item = new HashMap<>();
+    var item = new HashMap<String, AttributeValue>();
     item.put("shipmentId", shipmentId);
     item.put("recipient", AttributeValue.builder()
         .m(Map.of(
@@ -365,7 +345,7 @@ public class LocalStackSetupConfigurations {
         ))
         .build());
 
-    AttributeValue senderName = AttributeValue.builder().s("Warehouse of Unicorns").build();
+    var senderName = AttributeValue.builder().s("Warehouse of Unicorns").build();
 
     item.put("sender", AttributeValue.builder()
         .m(Map.of(
@@ -384,7 +364,7 @@ public class LocalStackSetupConfigurations {
     item.put("weight", AttributeValue.builder().s("2.3").build());
 
     // Create a PutItemRequest with the table name and item
-    PutItemRequest putItemRequest = PutItemRequest.builder()
+    var putItemRequest = PutItemRequest.builder()
         .tableName(tableName)
         .item(item)
         .build();
@@ -395,15 +375,15 @@ public class LocalStackSetupConfigurations {
 
   private static void createS3Bucket() {
     // bucket name
-    String bucketName = BucketName.SHIPMENT_PICTURE.getBucketName();
+    var bucketName = BucketName.SHIPMENT_PICTURE.getBucketName();
     // CreateBucketRequest with the bucket name
-    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
+    var createBucketRequest = CreateBucketRequest.builder()
         .bucket(bucketName)
         .build();
     // createBucket operation to create the bucket
     s3Client.createBucket(createBucketRequest);
 
-    PutBucketPolicyRequest putBucketPolicyRequest = PutBucketPolicyRequest.builder()
+    var putBucketPolicyRequest = PutBucketPolicyRequest.builder()
         .bucket(bucketName)
         .policy(
             "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowLambdaInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::"
@@ -416,10 +396,10 @@ public class LocalStackSetupConfigurations {
 
   protected static ExecResult executeInContainer(String command) throws Exception {
 
-    final ExecResult execResult = localStack.execInContainer(formatCommand(command));
+    final var execResult = localStack.execInContainer(formatCommand(command));
     // assertEquals(0, execResult.getExitCode());
 
-    final String logs = execResult.getStdout() + execResult.getStderr();
+    final var logs = execResult.getStdout() + execResult.getStderr();
     logger.info(logs);
     logger.error(execResult.getExitCode() != 0 ? execResult + " - DOES NOT WORK" : "");
     return execResult;
