@@ -39,24 +39,24 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   void testFileUploadToS3() throws Exception {
 
     // Prepare the file to upload
-    byte[] imageData = new byte[0];
+    var imageData = new byte[0];
     try {
       imageData = Files.readAllBytes(Path.of("src/test/java/resources/cat.jpg"));
     } catch (IOException e) {
       e.printStackTrace();
     }
-    ByteArrayResource resource = new ByteArrayResource(imageData) {
+    var resource = new ByteArrayResource(imageData) {
       @Override
       public String getFilename() {
         return "cat.jpg";
       }
     };
 
-    String shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
+    var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
     // build the URL with the id as a path variable
-    String url = "/api/shipment/" + shipmentId + "/image/upload";
+    var url = "/api/shipment/" + shipmentId + "/image/upload";
     // set the request headers
-    HttpHeaders headers = new HttpHeaders();
+    var headers = new HttpHeaders();
     headers.setContentType(MediaType.MULTIPART_FORM_DATA);
     // request body with the file resource and headers
     MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
@@ -68,7 +68,7 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
         HttpMethod.POST, requestEntity, String.class);
 
     assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-    ExecResult execResult = executeInContainer(
+    var execResult = executeInContainer(
         "awslocal s3api list-objects --bucket shipment-picture-bucket --query length(Contents[])");
     assertEquals(String.valueOf(1), execResult.getStdout().trim());
   }
@@ -77,9 +77,9 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(2)
   void testFileDownloadFromS3() {
 
-    String shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
+    var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
     // build the URL with the id as a path variable
-    String url = "/api/shipment/" + shipmentId + "/image/download";
+    var url = "/api/shipment/" + shipmentId + "/image/download";
 
     ResponseEntity<byte[]> responseEntity = restTemplate.exchange(BASE_URL + url,
         HttpMethod.GET, null, byte[].class);
@@ -93,9 +93,9 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(3)
   void testFileDownloadFromS3FailsOnWrongId() {
 
-    String shipmentId = "3317ac4f-1f9b-4bab-a974-4aa987wrong";
+    var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa987wrong";
     // build the URL with the id as a path variable
-    String url = "/api/shipment/" + shipmentId + "/image/download";
+    var url = "/api/shipment/" + shipmentId + "/image/download";
     ResponseEntity<byte[]> responseEntity = restTemplate.exchange(BASE_URL + url,
         HttpMethod.GET, null, byte[].class);
     assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
@@ -105,7 +105,7 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(4)
   void testGetShipmentFromDynamoDB() throws IOException {
 
-    String url = "/api/shipment";
+    var url = "/api/shipment";
     // set the request headers
     ResponseEntity<List<Shipment>> responseEntity = restTemplate.exchange(BASE_URL + url,
         HttpMethod.GET, null, new ParameterizedTypeReference<>() {
@@ -115,10 +115,10 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
     assertNotNull(responseEntity.getBody());
 
     if (responseEntity.getStatusCode().is2xxSuccessful()) {
-      File json = new File("src/test/java/resources/shipment.json");
-      Shipment shipment = objectMapper.readValue(json, Shipment.class);
+      var json = new File("src/test/java/resources/shipment.json");
+      var shipment = objectMapper.readValue(json, Shipment.class);
       List<Shipment> shipmentList = responseEntity.getBody();
-      Shipment shipmentWithoutLink = shipmentList.get(0);
+      var shipmentWithoutLink = shipmentList.get(0);
       shipmentWithoutLink.setImageLink(null);
       assertEquals(shipment, shipmentWithoutLink);
     }
@@ -128,13 +128,13 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(5)
   void testAddShipmentToDynamoDB() throws IOException {
 
-    String url = "/api/shipment";
+    var url = "/api/shipment";
     // set the request headers
 
-    File json = new File("src/test/java/resources/shipmentToUpload.json");
-    Shipment shipment = objectMapper.readValue(json, Shipment.class);
+    var json = new File("src/test/java/resources/shipmentToUpload.json");
+    var shipment = objectMapper.readValue(json, Shipment.class);
 
-    HttpHeaders headers = new HttpHeaders();
+    var headers = new HttpHeaders();
     headers.setContentType(MediaType.valueOf(MediaType.APPLICATION_JSON_VALUE));
 
     HttpEntity<Shipment> requestEntity = new HttpEntity<>(shipment,
@@ -151,7 +151,7 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(6)
   void testGetTwoShipmentsFromDynamoDB() {
 
-    String url = "/api/shipment";
+    var url = "/api/shipment";
     // set the request headers
     ResponseEntity<List<Shipment>> responseEntity = restTemplate.exchange(BASE_URL + url,
         HttpMethod.GET, null, new ParameterizedTypeReference<>() {
@@ -167,8 +167,8 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
   @Order(7)
   void testDeleteShipmentFromDynamoDB() {
 
-    String url = "/api/shipment";
-    String shipmentId = "/3317ac4f-1f9b-4bab-a974-4aa9876d5547";
+    var url = "/api/shipment";
+    var shipmentId = "/3317ac4f-1f9b-4bab-a974-4aa9876d5547";
 
     // set the request headers
     ResponseEntity<String> deleteResponseEntity = restTemplate.exchange(BASE_URL + url + shipmentId,
@@ -187,17 +187,7 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
     }
   }
 
-//  @Test
-//  @Order(8)
-//  void testSQSMessage() {
-//
-//    String url = "/push-endpoint";
-//    // set the request headers
-//    ResponseEntity<String> responseEntity = restTemplate.exchange(BASE_URL + url,
-//        HttpMethod.GET, null, String.class);
-//    assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-//
-//  }
+
 
 
 }

@@ -47,18 +47,16 @@ public class ServiceHandler implements RequestStreamHandler {
 
     context.getLogger().log("Object key: " + objectKey);
 
-      var getObjectRequest = GetObjectRequest.builder()
-          .bucket(BUCKET_NAME)
-          .key(objectKey)
-          .build();
-
+    var getObjectRequest = GetObjectRequest.builder()
+        .bucket(BUCKET_NAME)
+        .key(objectKey)
+        .build();
 
     ResponseInputStream<GetObjectResponse> s3ObjectResponse;
     try {
       s3ObjectResponse = s3Client.getObject(
-        getObjectRequest);
+          getObjectRequest);
     } catch (Exception e) {
-      context.getLogger().log("Fails on first call - potential connectivity issues");
       e.printStackTrace();
       context.getLogger().log(e.getMessage());
       return;

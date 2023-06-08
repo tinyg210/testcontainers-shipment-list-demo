@@ -36,16 +36,12 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.AttachRolePolicyRequest;
-import software.amazon.awssdk.services.iam.model.CreatePolicyRequest;
-import software.amazon.awssdk.services.iam.model.CreatePolicyResponse;
 import software.amazon.awssdk.services.iam.model.CreateRoleRequest;
 import software.amazon.awssdk.services.iam.model.GetRoleRequest;
 import software.amazon.awssdk.services.iam.model.GetRoleResponse;
-import software.amazon.awssdk.services.iam.model.IamException;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.AddPermissionRequest;
 import software.amazon.awssdk.services.lambda.model.CreateFunctionRequest;
-import software.amazon.awssdk.services.lambda.model.Environment;
 import software.amazon.awssdk.services.lambda.model.FunctionCode;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -70,11 +66,13 @@ public class LocalStackSetupConfigurations {
   protected TestRestTemplate restTemplate = new TestRestTemplate();
 
   protected static final String BASE_URL = "http://localhost:8081";
+
   @Container
   protected static LocalStackContainer localStack =
       new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
-          // .withEnv("DNS_LOCAL_NAME_PATTERNS", ".*s3.*.amazonaws.com")
-          .withEnv("DNS_ADDRESS", "0")
+          .withExposedPorts(4566)
+          .withEnv("DNS_LOCAL_NAME_PATTERNS", ".*s3.*.amazonaws.com")
+          .withEnv("DNS_ADDRESS", "1")
           .withEnv("DEBUG", "1");
   private static Region region = Region.of(localStack.getRegion());
   private static S3Client s3Client;
@@ -107,7 +105,6 @@ public class LocalStackSetupConfigurations {
   @BeforeAll
   static void setup() throws Exception {
     localStack.followOutput(logConsumer);
-
     s3Client = S3Client.builder()
         .region(region)
         .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
@@ -167,7 +164,7 @@ public class LocalStackSetupConfigurations {
         .build());
 
     String policyArn1 = "arn:aws:iam::aws:policy/AmazonS3FullAccess";
-    String policyArn2 = "arn:aws:iam::aws:policy/AWSLambda_FullAccess";
+//      String policyArn2 = "arn:aws:iam::aws:policy/AWSLambda_FullAccess";
 
     iamClient.attachRolePolicy(
         AttachRolePolicyRequest.builder()
@@ -175,59 +172,12 @@ public class LocalStackSetupConfigurations {
             .policyArn(policyArn1)
             .build());
 
-    iamClient.attachRolePolicy(
-        AttachRolePolicyRequest.builder()
-            .roleName(roleName)
-            .policyArn(policyArn2)
-            .build());
+//    iamClient.attachRolePolicy(
+//        AttachRolePolicyRequest.builder()
+//            .roleName(roleName)
+//            .policyArn(policyArn2)
+//            .build());
 
-    String policyDocument = "{" +
-        "    \"Version\": \"2012-10-17\"," +
-        "    \"Statement\": [" +
-        "        {" +
-        "            \"Effect\": \"Allow\"," +
-        "            \"Action\": [" +
-        "                \"logs:CreateLogGroup\"," +
-        "                \"logs:CreateLogStream\"," +
-        "                \"logs:PutLogEvents\"" +
-        "            ]," +
-        "            \"Resource\": \"arn:aws:logs:*:*:*\"" +
-        "        }," +
-        "        {" +
-        "            \"Effect\": \"Allow\"," +
-        "            \"Action\": [" +
-        "                \"s3:GetObject\"," +
-        "                \"s3:PutObject\"," +
-        "                \"sns:Publish\"" +
-        "            ]," +
-        "            \"Resource\": [" +
-        "                \"arn:aws:s3:::shipment-picture-bucket\"," +
-        "                \"arn:aws:s3:::shipment-picture-bucket/*\"" +
-        "            ]" +
-        "        }" +
-        "    ]" +
-        "}";
-
-    // Create the IAM role policy
-    try {
-      CreatePolicyResponse createPolicyResponse = iamClient.createPolicy(
-          CreatePolicyRequest.builder()
-              .policyName("lambda_exec_policy")
-              .policyDocument(policyDocument)
-              .build());
-
-      String policyArn = createPolicyResponse.policy().arn();
-
-      // Attach the policy to the IAM role
-      iamClient.attachRolePolicy(AttachRolePolicyRequest.builder()
-          .roleName(roleName)
-          .policyArn(policyArn)
-          .build());
-
-    } catch (IamException e) {
-      System.err.println(e.awsErrorDetails().errorMessage());
-      System.exit(1);
-    }
   }
 
   private static String getQueueUrl(SqsClient sqsClient, String queueName) {
@@ -330,7 +280,7 @@ public class LocalStackSetupConfigurations {
 
       var env = new HashMap<String, String>();
       env.put("ENVIRONMENT", "dev");
-      env.put("s3.endpoint", String.valueOf(localStack.getEndpointOverride(Service.S3)));
+      env.put("s3.endpoint", String.valueOf(localStack.getMappedPort(4566)));
 
       CreateFunctionRequest createFunctionRequest = CreateFunctionRequest.builder()
           .functionName(functionName)
@@ -340,7 +290,7 @@ public class LocalStackSetupConfigurations {
           .role(roleArn)
           .timeout(60)
           .memorySize(512)
-          .environment(Environment.builder().variables(env).build())
+          // .environment(Environment.builder().variables(env).build())
           .build();
 
       lambdaClient.createFunction(
