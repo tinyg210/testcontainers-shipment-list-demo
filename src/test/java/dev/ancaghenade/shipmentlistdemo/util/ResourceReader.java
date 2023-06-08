@@ -1,4 +1,4 @@
-package dev.ancaghenade.shipmentlistdemo.service;
+package dev.ancaghenade.shipmentlistdemo.util;
 
 import java.io.IOException;
 import java.io.InputStreamReader;

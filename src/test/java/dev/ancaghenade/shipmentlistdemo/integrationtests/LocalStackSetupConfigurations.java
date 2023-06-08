@@ -1,4 +1,4 @@
-package dev.ancaghenade.shipmentlistdemo.service;
+package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
 import dev.ancaghenade.shipmentlistdemo.buckets.BucketName;
 import java.io.IOException;
@@ -77,7 +77,7 @@ public class LocalStackSetupConfigurations {
   private static SqsClient sqsClient;
   private static SnsClient snsClient;
   private static IamClient iamClient;
-  private static Logger logger = LoggerFactory.getLogger(ShipmentServiceTest.class);
+  private static Logger logger = LoggerFactory.getLogger(ShipmentServiceIntegrationTest.class);
 
   protected static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -101,6 +101,7 @@ public class LocalStackSetupConfigurations {
   @BeforeAll
   static void setup() throws Exception {
     localStack.followOutput(logConsumer);
+
     s3Client = S3Client.builder()
         .region(region)
         .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))

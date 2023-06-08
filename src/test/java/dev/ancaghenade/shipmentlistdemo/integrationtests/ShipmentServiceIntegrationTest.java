@@ -1,4 +1,4 @@
-package dev.ancaghenade.shipmentlistdemo.service;
+package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,7 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class ShipmentServiceTest extends LocalStackSetupConfigurations {
+class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
 
 
   @Test
@@ -184,18 +184,6 @@ class ShipmentServiceTest extends LocalStackSetupConfigurations {
       List<Shipment> shipmentList = getResponseEntity.getBody();
       assertEquals(1, shipmentList.size());
     }
-  }
-
-  @Test
-  @Order(8)
-  void testSQSMessage() {
-
-    String url = "/push-endpoint";
-    // set the request headers
-    ResponseEntity<String> responseEntity = restTemplate.exchange(BASE_URL + url,
-        HttpMethod.GET, null, String.class);
-    assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-
   }
 
 }

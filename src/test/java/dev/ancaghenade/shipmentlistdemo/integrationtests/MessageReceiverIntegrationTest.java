@@ -1,0 +1,81 @@
+package dev.ancaghenade.shipmentlistdemo.integrationtests;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+@Testcontainers
+@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class MessageReceiverIntegrationTest extends LocalStackSetupConfigurations {
+
+  @Test
+  void testSNSSQSMessageReceiver() {
+
+    var imageData = new byte[0];
+    try {
+      imageData = Files.readAllBytes(Path.of("src/test/java/resources/cat.jpg"));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    var resource = new ByteArrayResource(imageData) {
+      @Override
+      public String getFilename() {
+        return "cat.jpg";
+      }
+    };
+
+    var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
+    // build the URL with the id as a path variable
+    var url = "/api/shipment/" + shipmentId + "/image/upload";
+    // set the request headers
+    var headers = new HttpHeaders();
+    headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+    // request body with the file resource and headers
+    MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
+    requestBody.add("file", resource);
+    HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(requestBody,
+        headers);
+
+    ResponseEntity<String> responseEntity = restTemplate.exchange(BASE_URL + url,
+        HttpMethod.POST, requestEntity, String.class);
+
+    assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+    // give the Lambda time to start up and process the image + send the message to SQS
+    try {
+      Thread.sleep(10000);
+
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+
+    String sseUrl = "/push-endpoint";
+
+    ResponseEntity<String> sseEndpointResponse = restTemplate.getForEntity(BASE_URL + sseUrl,
+        String.class);
+    assertEquals(HttpStatus.OK, sseEndpointResponse.getStatusCode());
+
+    assertTrue(sseEndpointResponse.getBody().contains("3317ac4f-1f9b-4bab-a974-4aa9876d5547"));
+
+  }
+
+}

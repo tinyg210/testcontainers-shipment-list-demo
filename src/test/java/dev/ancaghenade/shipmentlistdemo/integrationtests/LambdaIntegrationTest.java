@@ -1,4 +1,4 @@
-package dev.ancaghenade.shipmentlistdemo.service;
+package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -79,7 +79,6 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
     // give the Lambda time to start up and process the image
     try {
-      // Wait for 10 seconds
       Thread.sleep(10000);
 
     } catch (InterruptedException e) {
