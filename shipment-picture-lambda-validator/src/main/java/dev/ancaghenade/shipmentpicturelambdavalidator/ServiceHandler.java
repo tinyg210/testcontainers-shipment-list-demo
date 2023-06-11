@@ -26,8 +26,7 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 public class ServiceHandler implements RequestStreamHandler {
 
-  private static final String BUCKET_NAME = "shipment-picture-bucket";
-
+  private static final String BUCKET_NAME = System.getenv("BUCKET");
   public ServiceHandler() {
   }
 
@@ -158,11 +157,7 @@ public class ServiceHandler implements RequestStreamHandler {
   }
 
   private SnsClient acquireSnsClient() {
-    try {
-      return SNSClientHelper.getSnsClient();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return SNSClientHelper.getSnsClient();
   }
 }
 

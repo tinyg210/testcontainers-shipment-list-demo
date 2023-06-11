@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.ancaghenade.shipmentlistdemo.buckets.BucketName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -79,7 +78,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
     // give the Lambda time to start up and process the image
     try {
-      Thread.sleep(10000);
+      Thread.sleep(15000);
 
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -109,7 +108,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
     dynamoDbClient.getItem(getItemRequest);
     GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-        .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+        .bucket(BUCKET_NAME)
         .key(getItemResponse.item().get("imageLink").s())
         .build();
     try {

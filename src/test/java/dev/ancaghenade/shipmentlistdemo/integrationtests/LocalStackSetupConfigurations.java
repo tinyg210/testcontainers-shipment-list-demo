@@ -1,10 +1,10 @@
 package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
-import dev.ancaghenade.shipmentlistdemo.buckets.BucketName;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.json.JSONObject;
@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.iam.model.GetRoleRequest;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.AddPermissionRequest;
 import software.amazon.awssdk.services.lambda.model.CreateFunctionRequest;
+import software.amazon.awssdk.services.lambda.model.Environment;
 import software.amazon.awssdk.services.lambda.model.FunctionCode;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -61,14 +62,15 @@ public class LocalStackSetupConfigurations {
   private static Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
   protected TestRestTemplate restTemplate = new TestRestTemplate();
 
+  protected static final String BUCKET_NAME = "shipment-picture-bucket";
   protected static final String BASE_URL = "http://localhost:8081";
 
   @Container
   protected static LocalStackContainer localStack =
       new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
           .withExposedPorts(4566)
-          .withEnv("DNS_LOCAL_NAME_PATTERNS", ".*s3.*.amazonaws.com")
-          .withEnv("DNS_ADDRESS", "1")
+          //  .withEnv("DNS_LOCAL_NAME_PATTERNS", ".*s3.*.amazonaws.com")
+          //  .withEnv("DNS_ADDRESS", "1")
           .withEnv("DEBUG", "1");
   private static Region region = Region.of(localStack.getRegion());
   protected static S3Client s3Client;
@@ -96,6 +98,7 @@ public class LocalStackSetupConfigurations {
     registry.add("aws.credentials.secret-key", localStack::getSecretKey);
     registry.add("aws.credentials.access-key", localStack::getAccessKey);
     registry.add("aws.region", () -> localStack.getRegion());
+    registry.add("shipment-picture-bucket", () -> BUCKET_NAME);
   }
 
   @BeforeAll
@@ -231,7 +234,7 @@ public class LocalStackSetupConfigurations {
 
     // Create the request
     var request = PutBucketNotificationConfigurationRequest.builder()
-        .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+        .bucket(BUCKET_NAME)
         .notificationConfiguration(notificationConfiguration)
         .build();
 
@@ -244,7 +247,7 @@ public class LocalStackSetupConfigurations {
     var runtime = "java11";
     var handler = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest";
     var zipFilePath = "shipment-picture-lambda-validator/target/shipment-picture-lambda-validator.jar";
-    var sourceArn = "arn:aws:s3:000000000000:shipment-picture-bucket";
+    var sourceArn = "arn:aws:s3:000000000000:" + BUCKET_NAME;
     var statementId = "AllowExecutionFromS3Bucket";
     var action = "lambda:InvokeFunction";
     var principal = "s3.amazonaws.com";
@@ -259,10 +262,6 @@ public class LocalStackSetupConfigurations {
       var zipFileBytes = Files.readAllBytes(Paths.get(zipFilePath));
       var zipFileBuffer = ByteBuffer.wrap(zipFileBytes);
 
-      var env = new HashMap<String, String>();
-      env.put("ENVIRONMENT", "dev");
-      env.put("s3.endpoint", String.valueOf(localStack.getMappedPort(4566)));
-
       var createFunctionRequest = CreateFunctionRequest.builder()
           .functionName(functionName)
           .runtime(runtime)
@@ -271,7 +270,9 @@ public class LocalStackSetupConfigurations {
           .role(roleArn)
           .timeout(60)
           .memorySize(512)
-          // .environment(Environment.builder().variables(env).build())
+          .environment(
+              Environment.builder().variables(Collections.singletonMap("BUCKET", BUCKET_NAME))
+                  .build())
           .build();
 
       lambdaClient.createFunction(
@@ -376,7 +377,7 @@ public class LocalStackSetupConfigurations {
 
   private static void createS3Bucket() {
     // bucket name
-    var bucketName = BucketName.SHIPMENT_PICTURE.getBucketName();
+    var bucketName = BUCKET_NAME;
     // CreateBucketRequest with the bucket name
     var createBucketRequest = CreateBucketRequest.builder()
         .bucket(bucketName)
@@ -388,7 +389,7 @@ public class LocalStackSetupConfigurations {
         .bucket(bucketName)
         .policy(
             "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowLambdaInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::"
-                + BucketName.SHIPMENT_PICTURE.getBucketName() + "/*\"}]}")
+                + BUCKET_NAME + "/*\"}]}")
         .build();
 
     s3Client.putBucketPolicy(putBucketPolicyRequest);

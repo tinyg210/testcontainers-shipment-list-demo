@@ -1,6 +1,5 @@
 package dev.ancaghenade.shipmentpicturelambdavalidator;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Objects;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -10,7 +9,7 @@ public class SNSClientHelper {
   private static final String LOCALSTACK_HOSTNAME = System.getenv("LOCALSTACK_HOSTNAME");
   private static String snsTopicArn;
 
-  public static SnsClient getSnsClient() throws IOException {
+  public static SnsClient getSnsClient() {
 
     var clientBuilder = SnsClient.builder();
 

@@ -28,16 +28,18 @@ public class S3StorageService {
   private final S3Client s3;
   private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageService.class);
 
+  private final BucketName bucketName;
   @Autowired
-  public S3StorageService(S3Client s3) {
+  public S3StorageService(S3Client s3, BucketName bucketName) {
     this.s3 = s3;
+    this.bucketName = bucketName;
   }
 
   public void save(String path, String fileName,
       MultipartFile multipartFile)
       throws IOException {
     PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-        .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+        .bucket(bucketName.getShipmentPictureBucket())
         .key(path + "/" + fileName)
         .contentType(multipartFile.getContentType())
         .contentLength(multipartFile.getSize())
@@ -50,7 +52,7 @@ public class S3StorageService {
 
   public byte[] download(String key) throws IOException {
     GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-        .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+        .bucket(bucketName.getShipmentPictureBucket())
         .key(key)
         .build();
     byte[] object = new byte[0];
@@ -65,14 +67,14 @@ public class S3StorageService {
   public void delete(String folderPrefix) {
     List<ObjectIdentifier> keysToDelete = new ArrayList<>();
     s3.listObjectsV2Paginator(
-            builder -> builder.bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+            builder -> builder.bucket(bucketName.getShipmentPictureBucket())
                 .prefix(folderPrefix + "/"))
         .contents().stream()
         .map(S3Object::key)
         .forEach(key -> keysToDelete.add(ObjectIdentifier.builder().key(key).build()));
 
     DeleteObjectsRequest deleteRequest = DeleteObjectsRequest.builder()
-        .bucket(BucketName.SHIPMENT_PICTURE.getBucketName())
+        .bucket(bucketName.getShipmentPictureBucket())
         .delete(builder -> builder.objects(keysToDelete).build())
         .build();
 
