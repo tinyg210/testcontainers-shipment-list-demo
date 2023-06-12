@@ -10,12 +10,11 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,22 +24,72 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.localstack.LocalStackContainer.Service;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sqs.SqsClient;
 
-@Testcontainers
-@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
+  @BeforeAll
+  static void setup() throws Exception {
+    localStack.followOutput(logConsumer);
+
+    s3Client = S3Client.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+        .build();
+    dynamoDbClient = DynamoDbClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.DYNAMODB))
+        .build();
+    lambdaClient = LambdaClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.LAMBDA))
+        .build();
+    sqsClient = SqsClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.SQS))
+        .build();
+    snsClient = SnsClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.SNS))
+        .build();
+    iamClient = IamClient.builder()
+        .region(Region.AWS_GLOBAL)
+        .endpointOverride(localStack.getEndpointOverride(Service.IAM))
+        .build();
+
+    createS3Bucket();
+    createDynamoDBResources();
+    createIAMRole();
+    createLambdaResources();
+    createBucketNotificationConfiguration();
+    createSNS();
+    createSQS();
+    createSNSSubscription();
+
+    lambdaClient.close();
+    snsClient.close();
+    sqsClient.close();
+    iamClient.close();
+
+  }
 
   @Test
   @Order(1)
   void testFileAddWatermarkInLambda() {
-
     // prepare the file to upload
     var imageData = new byte[0];
     try {
@@ -118,6 +167,8 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
           entry -> entry.getKey().equals("exclude-lambda") && entry.getValue().equals("true")));
     } catch (NoSuchKeyException noSuchKeyException) {
     }
+    dynamoDbClient.close();
+    s3Client.close();
 
 
   }

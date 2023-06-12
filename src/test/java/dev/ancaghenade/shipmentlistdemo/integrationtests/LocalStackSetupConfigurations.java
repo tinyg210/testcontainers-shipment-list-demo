@@ -8,9 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.json.JSONObject;
-import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -19,6 +20,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.core.SdkBytes;
@@ -56,10 +58,12 @@ import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 
+@Testcontainers
+@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 public class LocalStackSetupConfigurations {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalStackSetupConfigurations.class);
-  private static Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
+  protected static Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
   protected TestRestTemplate restTemplate = new TestRestTemplate();
 
   protected static final String BUCKET_NAME = "shipment-picture-bucket";
@@ -69,17 +73,15 @@ public class LocalStackSetupConfigurations {
   protected static LocalStackContainer localStack =
       new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
           .withExposedPorts(4566)
-          //  .withEnv("DNS_LOCAL_NAME_PATTERNS", ".*s3.*.amazonaws.com")
-          //  .withEnv("DNS_ADDRESS", "1")
           .withEnv("DEBUG", "1");
-  private static Region region = Region.of(localStack.getRegion());
+  protected static Region region = Region.of(localStack.getRegion());
   protected static S3Client s3Client;
   protected static DynamoDbClient dynamoDbClient;
-  private static LambdaClient lambdaClient;
-  private static SqsClient sqsClient;
-  private static SnsClient snsClient;
-  private static IamClient iamClient;
-  private static Logger logger = LoggerFactory.getLogger(ShipmentServiceIntegrationTest.class);
+  protected static LambdaClient lambdaClient;
+  protected static SqsClient sqsClient;
+  protected static SnsClient snsClient;
+  protected static IamClient iamClient;
+  protected static Logger logger = LoggerFactory.getLogger(ShipmentServiceIntegrationTest.class);
 
   protected static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -101,65 +103,25 @@ public class LocalStackSetupConfigurations {
     registry.add("shipment-picture-bucket", () -> BUCKET_NAME);
   }
 
-  @BeforeAll
-  static void setup() throws Exception {
-    localStack.followOutput(logConsumer);
 
-    s3Client = S3Client.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
-        .build();
-    dynamoDbClient = DynamoDbClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.DYNAMODB))
-        .build();
-    lambdaClient = LambdaClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.LAMBDA))
-        .build();
-    sqsClient = SqsClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.SQS))
-        .build();
-    snsClient = SnsClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.SNS))
-        .build();
-    iamClient = IamClient.builder()
-        .region(Region.AWS_GLOBAL)
-        .endpointOverride(localStack.getEndpointOverride(Service.IAM))
-        .build();
-
-    createS3Bucket();
-    createIAMRole();
-    createDynamoDBResources();
-    createLambdaResources();
-    createBucketNotificationConfiguration();
-    createSNS();
-    createSQS();
-    createSNSSubscription();
-
-    lambdaClient.close();
-    snsClient.close();
-    sqsClient.close();
-
-  }
-
-  private static void createIAMRole() {
+  protected static void createIAMRole() {
     var roleName = "lambda_exec_role";
+    // assume role policy document
     var assumeRolePolicyDocument = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}";
 
+    // call createRole API with request using name and policy
     iamClient.createRole(CreateRoleRequest.builder()
         .roleName(roleName)
         .assumeRolePolicyDocument(assumeRolePolicyDocument)
         .build());
 
-    var policyArn1 = "arn:aws:iam::aws:policy/AmazonS3FullAccess";
+    var policyArn = "arn:aws:iam::aws:policy/AmazonS3FullAccess";
 
+    // attach s3 full access policy to role
     iamClient.attachRolePolicy(
         AttachRolePolicyRequest.builder()
             .roleName(roleName)
-            .policyArn(policyArn1)
+            .policyArn(policyArn)
             .build());
 
   }
@@ -168,51 +130,64 @@ public class LocalStackSetupConfigurations {
     return sqsClient.getQueueUrl(r -> r.queueName(queueName)).queueUrl();
   }
 
-  private static void createSNSSubscription() {
+  protected static void createSNSSubscription() {
     String topicArn = snsClient.listTopics().topics().get(0).topicArn();
-    // Get the queue URL
+    // get the queue URL
     String queueName = "update_shipment_picture_queue";
 
+    // create get queue attributes request
     var request = GetQueueAttributesRequest.builder()
         .queueUrl(getQueueUrl(sqsClient, queueName))
         .attributeNames(QueueAttributeName.QUEUE_ARN)
         .build();
 
+    // call API with the request and get the attributes
     var response = sqsClient.getQueueAttributes(request);
+    // extract queue arn
     String queueArn = response.attributes().get(QueueAttributeName.QUEUE_ARN);
 
+    // create the queue subscribe to topic request
     var subscribeRequest = SubscribeRequest.builder()
         .topicArn(topicArn)
         .protocol("sqs")
         .endpoint(queueArn)
         .build();
 
+    // call subscribe API with request
     snsClient.subscribe(subscribeRequest);
   }
 
-  private static void createSQS() {
+  protected static void createSQS() {
+    // queue name
     var queueName = "update_shipment_picture_queue";
 
+    // request to create queue
     var request = CreateQueueRequest.builder()
         .queueName(queueName)
         .build();
 
+    // call createQueue API with the request
     sqsClient.createQueue(request);
   }
 
-  private static void createSNS() {
+  protected static void createSNS() {
+    // topic name
     var topicName = "update_shipment_picture_topic";
 
+    // create topic request
     var request = CreateTopicRequest.builder()
         .name(topicName)
         .build();
 
+    // call createTopic API with request
     snsClient.createTopic(request);
   }
 
-  private static void createBucketNotificationConfiguration()
+  protected static void createBucketNotificationConfiguration()
       throws IOException, InterruptedException {
 
+    // lambda needs to be in state "Active" in order to proceed with adding permissions
+    // this can take 2-3 seconds to reach
     var result = localStack.execInContainer(formatCommand(
         "awslocal lambda get-function --function-name shipment-picture-lambda-validator"));
     var obj = new JSONObject(result.getStdout()).getJSONObject("Configuration");
@@ -224,6 +199,7 @@ public class LocalStackSetupConfigurations {
       state = obj.getString("State");
     }
 
+    // create notification configuration
     var notificationConfiguration = NotificationConfiguration.builder()
         .lambdaFunctionConfigurations(
             LambdaFunctionConfiguration.builder().id("shipment-picture-lambda-validator")
@@ -232,17 +208,17 @@ public class LocalStackSetupConfigurations {
                         + ":000000000000:function:shipment-picture-lambda-validator")
                 .events(Event.S3_OBJECT_CREATED).build()).build();
 
-    // Create the request
+    // create the request for trigger
     var request = PutBucketNotificationConfigurationRequest.builder()
         .bucket(BUCKET_NAME)
         .notificationConfiguration(notificationConfiguration)
         .build();
 
-    // Call the PutBucketNotificationConfiguration API
+    // call the PutBucketNotificationConfiguration API with the request
     s3Client.putBucketNotificationConfiguration(request);
   }
 
-  private static void createLambdaResources() {
+  protected static void createLambdaResources() {
     var functionName = "shipment-picture-lambda-validator";
     var runtime = "java11";
     var handler = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest";
@@ -270,6 +246,7 @@ public class LocalStackSetupConfigurations {
           .role(roleArn)
           .timeout(60)
           .memorySize(512)
+          // bucket name that is being passed as env var because it's randomly generated
           .environment(
               Environment.builder().variables(Collections.singletonMap("BUCKET", BUCKET_NAME))
                   .build())
@@ -287,7 +264,7 @@ public class LocalStackSetupConfigurations {
           .sourceAccount("000000000000")
           .build();
 
-      // Call the AddPermission API
+      // call the addPermission API with the request
       lambdaClient.addPermission(request);
 
     } catch (Exception e) {
@@ -295,7 +272,7 @@ public class LocalStackSetupConfigurations {
     }
   }
 
-  private static void createDynamoDBResources() {
+  protected static void createDynamoDBResources() {
 
     // table name
     var tableName = "shipment";
@@ -323,13 +300,13 @@ public class LocalStackSetupConfigurations {
     // createTable operation to create the table
     dynamoDbClient.createTable(createTableRequest);
 
-    // Create attribute values for the item
+    // create attribute values for the item
     var shipmentId = AttributeValue.builder().s("3317ac4f-1f9b-4bab-a974-4aa9876d5547")
         .build();
     var recipientName = AttributeValue.builder().s("Harry Potter").build();
-    // Add other attributes as needed
+    // add other attributes as needed
 
-    // Create a map to hold the item attribute values
+    // create a map to hold the item attribute values
     var item = new HashMap<String, AttributeValue>();
     item.put("shipmentId", shipmentId);
     item.put("recipient", AttributeValue.builder()
@@ -365,17 +342,17 @@ public class LocalStackSetupConfigurations {
         .build());
     item.put("weight", AttributeValue.builder().s("2.3").build());
 
-    // Create a PutItemRequest with the table name and item
+    // create a PutItemRequest with the table name and item
     var putItemRequest = PutItemRequest.builder()
         .tableName(tableName)
         .item(item)
         .build();
 
-    // Call the PutItem operation to add the item to the table
+    // call the putItem operation to add the item to the table
     dynamoDbClient.putItem(putItemRequest);
   }
 
-  private static void createS3Bucket() {
+  protected static void createS3Bucket() {
     // bucket name
     var bucketName = BUCKET_NAME;
     // CreateBucketRequest with the bucket name

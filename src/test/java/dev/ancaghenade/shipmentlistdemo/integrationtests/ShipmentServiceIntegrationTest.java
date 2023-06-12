@@ -9,12 +9,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -25,13 +24,31 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.localstack.LocalStackContainer.Service;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.s3.S3Client;
 
-@Testcontainers
-@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
 
+  @BeforeAll
+  static void setup() {
+    localStack.followOutput(logConsumer);
+
+    s3Client = S3Client.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+        .build();
+    dynamoDbClient = DynamoDbClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.DYNAMODB))
+        .build();
+
+    createS3Bucket();
+    createDynamoDBResources();
+
+  }
 
   @Test
   @Order(1)
