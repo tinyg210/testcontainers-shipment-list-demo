@@ -148,6 +148,15 @@ to execute the tests in the order that we specify, to make the most out of the s
 We call all the endpoints and expect to get an HTTP 200 status code, but we also need to make sure
 that certain payloads will fail, so we need to check for edge cases and make sure all scenarios are covered.
 
+#### Steps to run your tests
+
+- Build the Lambda function:
+ cd into the `shipment-picture-lambda-validator` folder and `mvn clean package shade:shade`
+- Run the test classes:
+from the root folder: `mvn test -Dtest=ShipmentServiceIntegrationTest`
+or use your favourite IDE for a nice green stack of tests.
+
+
 ### Wrapping up
 
 Working with cloud services dictates a crucial need for integration tests. To enhance the testability 
