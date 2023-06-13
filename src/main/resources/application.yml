@@ -12,5 +12,5 @@ spring:
 # log everything
 logging:
   level:
-    root=debug:
+    root=info:
 

@@ -31,11 +31,11 @@ public class MessageReceiver {
 
   @SqsListener(value = "update_shipment_picture_queue")
   public void loadMessagesFromQueue(String notification) {
-    LOGGER.info("Message from queue %s" + notification);
+    LOGGER.info("Message from queue" + notification);
 
-    JSONObject obj = new JSONObject(notification);
-    String message = obj.getString("Message");
-    String shipmentId = message.split("/")[0];
+    var obj = new JSONObject(notification);
+    var message = obj.getString("Message");
+    var shipmentId = message.split("/")[0];
 
     shipmentService.updateImageLink(shipmentId, message);
 

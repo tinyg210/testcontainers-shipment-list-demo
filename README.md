@@ -16,7 +16,7 @@
 ## Introduction
 
 This repository will be focusing on integration tests for your AWS powered application, using Testcontainers.
-It is referencing another [repo](https://github.com/tinyg210/shipment-list-demo) that does strictly
+It is referencing another [repo](https://github.com/tinyg210/shipment-list-demo) that describes strictly
 the development part, so let's move forward with the integration tests here.
 
 The primary goal of integration tests is to uncover issues that may arise when different components 
@@ -56,7 +56,7 @@ You can refer to the original repository for instructions on how to run the appl
 
 ## Testcontainers
 
-If you're here I'm sure you at least heard of Testcontainers before.
+If you're here I'm sure you've at least heard of Testcontainers before.
 Testcontainers is a popular Java library that provides lightweight, disposable containers for running 
 integration tests. It allows developers to easily create and 
 manage isolated environments for testing applications that require dependencies like databases, message 
@@ -142,7 +142,7 @@ Once the application starts, the testing can begin, by using the `TestRestTempla
 tests by making HTTP requests and receiving responses. It provides a higher-level
 API compared to `RestTemplate`, making it more straight forward to write your calls.
 
-Since the lifecycle of the container is ties to the test class, we'll use the `@TestMethodOrder` annotation
+Since the lifecycle of the container is tied to the test class, we'll use the `@TestMethodOrder` annotation
 to execute the tests in the order that we specify, to make the most out of the sequential workflows.
 
 We call all the endpoints and expect to get an HTTP 200 status code, but we also need to make sure

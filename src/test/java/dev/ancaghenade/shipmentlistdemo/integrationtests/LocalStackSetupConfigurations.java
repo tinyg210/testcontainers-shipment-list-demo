@@ -72,7 +72,6 @@ public class LocalStackSetupConfigurations {
   @Container
   protected static LocalStackContainer localStack =
       new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
-          .withExposedPorts(4566)
           .withEnv("DEBUG", "1");
   protected static Region region = Region.of(localStack.getRegion());
   protected static S3Client s3Client;

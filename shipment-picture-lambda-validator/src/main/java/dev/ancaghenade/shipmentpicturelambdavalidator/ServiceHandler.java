@@ -27,6 +27,7 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
 public class ServiceHandler implements RequestStreamHandler {
 
   private static final String BUCKET_NAME = System.getenv("BUCKET");
+
   public ServiceHandler() {
   }
 
@@ -40,11 +41,11 @@ public class ServiceHandler implements RequestStreamHandler {
     var objectKey = getObjectKey(inputStream, context);
 
     if (Objects.isNull(objectKey)) {
-      context.getLogger().log("Object key is null");
+      context.getLogger().log("Object key is null" + "\n");
       return;
     }
 
-    context.getLogger().log("Object key: " + objectKey);
+    context.getLogger().log("Object key: " + objectKey + "\n");
 
     var getObjectRequest = GetObjectRequest.builder()
         .bucket(BUCKET_NAME)
@@ -57,15 +58,15 @@ public class ServiceHandler implements RequestStreamHandler {
           getObjectRequest);
     } catch (Exception e) {
       e.printStackTrace();
-      context.getLogger().log(e.getMessage());
+      context.getLogger().log(e.getMessage() + "\n");
       return;
     }
-    context.getLogger().log("Object fetched");
+    context.getLogger().log("Object fetched" + "\n");
 
     // Check if the image was already processed
     if (s3ObjectResponse.response().metadata().entrySet().stream().anyMatch(
         entry -> entry.getKey().equals("exclude-lambda") && entry.getValue().equals("true"))) {
-      context.getLogger().log("Object already present.");
+      context.getLogger().log("Object already present." + "\n");
       return;
     }
 
@@ -75,7 +76,7 @@ public class ServiceHandler implements RequestStreamHandler {
             ContentType.IMAGE_BMP.getMimeType())
         .contains(s3ObjectResponse.response().contentType())) {
       isValid = false;
-      context.getLogger().log("Object invalid due to wrong format.");
+      context.getLogger().log("Object invalid due to wrong format." + "\n");
 
     }
 
@@ -93,7 +94,7 @@ public class ServiceHandler implements RequestStreamHandler {
 
         objectKey = TextParser.replaceSufix(objectKey, "placeholder.jpg");
 
-        System.out.println("NEW IMAGE LINK: " + objectKey);
+        context.getLogger().log("NEW IMAGE LINK: " + objectKey + "\n");
 
         var putObjectRequest = PutObjectRequest.builder()
             .bucket(BUCKET_NAME)
@@ -120,7 +121,7 @@ public class ServiceHandler implements RequestStreamHandler {
       s3Client.putObject(putObjectRequest, RequestBody.fromBytes(
           Watermark.watermarkImage(objectData,
               extension.substring(extension.lastIndexOf("/") + 1))));
-      context.getLogger().log("Watermark has been added.");
+      context.getLogger().log("Watermark has been added." + "\n");
     }
     var request = PublishRequest
         .builder()
@@ -128,7 +129,7 @@ public class ServiceHandler implements RequestStreamHandler {
         .topicArn(SNSClientHelper.topicARN())
         .build();
     snsClient.publish(request);
-    context.getLogger().log("Published to topic: " + request.topicArn());
+    context.getLogger().log("Published to topic: " + request.topicArn() + "\n");
 
     // Close clients
     s3Client.close();
@@ -143,7 +144,7 @@ public class ServiceHandler implements RequestStreamHandler {
         return keys.iterator().next();
       }
     } catch (IOException ioe) {
-      context.getLogger().log("caught IOException reading input stream");
+      context.getLogger().log("caught IOException reading input stream" + "\n");
     }
     return null;
   }
