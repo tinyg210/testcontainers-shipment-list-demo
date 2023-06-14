@@ -19,11 +19,14 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -89,6 +92,7 @@ public class LocalStackSetupConfigurations {
   protected static void setupConfig() {
     localStackEndpoint = localStack.getEndpoint();
   }
+
   @DynamicPropertySource
   static void overrideConfigs(DynamicPropertyRegistry registry) {
     registry.add("aws.s3.endpoint",
@@ -105,6 +109,44 @@ public class LocalStackSetupConfigurations {
     registry.add("shipment-picture-bucket", () -> BUCKET_NAME);
   }
 
+  protected static void createClients() {
+    s3Client = S3Client.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+    dynamoDbClient = DynamoDbClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.DYNAMODB))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+    lambdaClient = LambdaClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.LAMBDA))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+    sqsClient = SqsClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.SQS))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+    snsClient = SnsClient.builder()
+        .region(region)
+        .endpointOverride(localStack.getEndpointOverride(Service.SNS))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+    iamClient = IamClient.builder()
+        .region(Region.AWS_GLOBAL)
+        .endpointOverride(localStack.getEndpointOverride(Service.IAM))
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+        .build();
+  }
 
   protected static void createIAMRole() {
     var roleName = "lambda_exec_role";

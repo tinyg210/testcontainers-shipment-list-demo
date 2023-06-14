@@ -24,19 +24,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer.Service;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
-import software.amazon.awssdk.services.iam.IamClient;
-import software.amazon.awssdk.services.lambda.LambdaClient;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.sns.SnsClient;
-import software.amazon.awssdk.services.sqs.SqsClient;
 
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -47,30 +38,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
     LocalStackSetupConfigurations.setupConfig();
     localStack.followOutput(logConsumer);
 
-    s3Client = S3Client.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
-        .build();
-    dynamoDbClient = DynamoDbClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.DYNAMODB))
-        .build();
-    lambdaClient = LambdaClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.LAMBDA))
-        .build();
-    sqsClient = SqsClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.SQS))
-        .build();
-    snsClient = SnsClient.builder()
-        .region(region)
-        .endpointOverride(localStack.getEndpointOverride(Service.SNS))
-        .build();
-    iamClient = IamClient.builder()
-        .region(Region.AWS_GLOBAL)
-        .endpointOverride(localStack.getEndpointOverride(Service.IAM))
-        .build();
+    createClients();
 
     createS3Bucket();
     createDynamoDBResources();
