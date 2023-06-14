@@ -43,8 +43,10 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll
-  static void setup() throws Exception {
+  public static void setup() throws IOException, InterruptedException {
+    LocalStackSetupConfigurations.setupConfig();
     localStack.followOutput(logConsumer);
+
 
     s3Client = S3Client.builder()
         .region(region)
@@ -90,6 +92,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
   @Test
   @Order(1)
   void testFileAddWatermarkInLambda() {
+
     // prepare the file to upload
     var imageData = new byte[0];
     try {

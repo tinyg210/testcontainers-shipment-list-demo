@@ -33,7 +33,9 @@ import software.amazon.awssdk.services.s3.S3Client;
 class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll
-  static void setup() {
+  public static void setup() {
+    LocalStackSetupConfigurations.setupConfig();
+
     localStack.followOutput(logConsumer);
 
     s3Client = S3Client.builder()

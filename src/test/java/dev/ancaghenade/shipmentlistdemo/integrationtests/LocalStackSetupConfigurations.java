@@ -1,6 +1,7 @@
 package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -8,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.json.JSONObject;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,7 +19,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -62,17 +63,17 @@ import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 public class LocalStackSetupConfigurations {
 
+  @Container
+  protected static LocalStackContainer localStack =
+      new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
+          .withEnv("DEBUG", "1");
+
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalStackSetupConfigurations.class);
   protected static Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
   protected TestRestTemplate restTemplate = new TestRestTemplate();
 
   protected static final String BUCKET_NAME = "shipment-picture-bucket";
-  protected static final String BASE_URL = "http://localhost:8081";
-
-  @Container
-  protected static LocalStackContainer localStack =
-      new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
-          .withEnv("DEBUG", "1");
+  protected static String BASE_URL = "http://localhost:8081";
   protected static Region region = Region.of(localStack.getRegion());
   protected static S3Client s3Client;
   protected static DynamoDbClient dynamoDbClient;
@@ -81,27 +82,30 @@ public class LocalStackSetupConfigurations {
   protected static SnsClient snsClient;
   protected static IamClient iamClient;
   protected static Logger logger = LoggerFactory.getLogger(ShipmentServiceIntegrationTest.class);
-
   protected static ObjectMapper objectMapper = new ObjectMapper();
-
+  protected static URI localStackEndpoint;
 
   @DynamicPropertySource
   static void overrideConfigs(DynamicPropertyRegistry registry) {
-
     registry.add("aws.s3.endpoint",
-        () -> localStack.getEndpointOverride(LocalStackContainer.Service.S3));
+        () -> localStackEndpoint);
     registry.add(
-        "aws.dynamodb.endpoint", () -> localStack.getEndpointOverride(Service.DYNAMODB));
+        "aws.dynamodb.endpoint", () -> localStackEndpoint);
     registry.add(
-        "aws.sqs.endpoint", () -> localStack.getEndpointOverride(Service.SQS));
+        "aws.sqs.endpoint", () -> localStackEndpoint);
     registry.add(
-        "aws.sns.endpoint", () -> localStack.getEndpointOverride(Service.SNS));
+        "aws.sns.endpoint", () -> localStackEndpoint);
     registry.add("aws.credentials.secret-key", localStack::getSecretKey);
     registry.add("aws.credentials.access-key", localStack::getAccessKey);
-    registry.add("aws.region", () -> localStack.getRegion());
+    registry.add("aws.region", localStack::getRegion);
     registry.add("shipment-picture-bucket", () -> BUCKET_NAME);
   }
 
+
+  @BeforeAll()
+  protected static void setupConfig() {
+    localStackEndpoint = localStack.getEndpoint();
+  }
 
   protected static void createIAMRole() {
     var roleName = "lambda_exec_role";

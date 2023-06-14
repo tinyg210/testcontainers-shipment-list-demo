@@ -30,7 +30,9 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public class MessageReceiverIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll
-  static void setup() throws Exception {
+  public static void setup() throws IOException, InterruptedException {
+    LocalStackSetupConfigurations.setupConfig();
+
     localStack.followOutput(logConsumer);
 
     s3Client = S3Client.builder()
@@ -73,6 +75,7 @@ public class MessageReceiverIntegrationTest extends LocalStackSetupConfiguration
     iamClient.close();
 
   }
+
   @Test
   void testSNSSQSMessageReceiver() {
     var imageData = new byte[0];
