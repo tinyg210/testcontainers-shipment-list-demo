@@ -1,6 +1,7 @@
 package dev.ancaghenade.shipmentlistdemo.integrationtests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -110,19 +111,19 @@ public class MessageReceiverIntegrationTest extends LocalStackSetupConfiguration
 
     // give the Lambda time to start up and process the image + send the message to SQS
     try {
-      Thread.sleep(10000);
+      Thread.sleep(5000);
 
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
 
-    String sseUrl = "/push-endpoint";
+    var sseUrl = "/push-endpoint";
 
     ResponseEntity<String> sseEndpointResponse = restTemplate.getForEntity(BASE_URL + sseUrl,
         String.class);
     assertEquals(HttpStatus.OK, sseEndpointResponse.getStatusCode());
-
-    assertTrue(sseEndpointResponse.getBody().contains("3317ac4f-1f9b-4bab-a974-4aa9876d5547"));
+    assertNotNull(sseEndpointResponse.getBody());
+    assertTrue(sseEndpointResponse.getBody().contains(shipmentId));
 
   }
 

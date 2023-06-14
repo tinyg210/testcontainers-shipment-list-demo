@@ -47,7 +47,6 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
     LocalStackSetupConfigurations.setupConfig();
     localStack.followOutput(logConsumer);
 
-
     s3Client = S3Client.builder()
         .region(region)
         .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
@@ -107,7 +106,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
       }
     };
 
-    var originalHash = getHash(imageData);
+    var originalHash = applyHash(imageData);
 
     var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
     // build the URL with the id as a path variable
@@ -141,7 +140,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
     assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
 
-    var watermarkHash = getHash(responseEntity.getBody());
+    var watermarkHash = applyHash(responseEntity.getBody());
 
     assertNotEquals(originalHash, watermarkHash);
 
@@ -169,6 +168,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
       assertTrue(s3ObjectResponse.response().metadata().entrySet().stream().anyMatch(
           entry -> entry.getKey().equals("exclude-lambda") && entry.getValue().equals("true")));
     } catch (NoSuchKeyException noSuchKeyException) {
+      noSuchKeyException.printStackTrace();
     }
     dynamoDbClient.close();
     s3Client.close();
@@ -176,7 +176,7 @@ public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
   }
 
-  private String getHash(byte[] data) {
+  private String applyHash(byte[] data) {
     String hashValue = null;
     try {
       var digest = MessageDigest.getInstance("SHA-256");
