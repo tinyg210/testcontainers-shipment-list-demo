@@ -85,6 +85,10 @@ public class LocalStackSetupConfigurations {
   protected static ObjectMapper objectMapper = new ObjectMapper();
   protected static URI localStackEndpoint;
 
+  @BeforeAll()
+  protected static void setupConfig() {
+    localStackEndpoint = localStack.getEndpoint();
+  }
   @DynamicPropertySource
   static void overrideConfigs(DynamicPropertyRegistry registry) {
     registry.add("aws.s3.endpoint",
@@ -101,11 +105,6 @@ public class LocalStackSetupConfigurations {
     registry.add("shipment-picture-bucket", () -> BUCKET_NAME);
   }
 
-
-  @BeforeAll()
-  protected static void setupConfig() {
-    localStackEndpoint = localStack.getEndpoint();
-  }
 
   protected static void createIAMRole() {
     var roleName = "lambda_exec_role";
