@@ -81,7 +81,7 @@ jobs:
       - name: State of LocalStack Instance as Cloud Pod
         if: failure()
         run: |
-          localstack pod save file:///localstack-state-pod
+          localstack pod save file://localstack-state-pod
 
       - name: Upload the Diagnostic Report
         if: failure()
