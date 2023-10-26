@@ -22,6 +22,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -30,6 +31,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ActiveProfiles("dev")
 class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll
@@ -55,7 +57,6 @@ class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
   @Test
   @Order(1)
   void testFileUploadToS3() throws Exception {
-
     // Prepare the file to upload
     var imageData = new byte[0];
     try {
@@ -69,7 +70,6 @@ class ShipmentServiceIntegrationTest extends LocalStackSetupConfigurations {
         return "cat.jpg";
       }
     };
-
     var shipmentId = "3317ac4f-1f9b-4bab-a974-4aa9876d5547";
     // build the URL with the id as a path variable
     var url = "/api/shipment/" + shipmentId + "/image/upload";

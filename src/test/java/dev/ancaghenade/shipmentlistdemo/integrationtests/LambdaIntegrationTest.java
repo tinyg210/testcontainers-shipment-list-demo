@@ -22,6 +22,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -31,6 +32,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ActiveProfiles("dev")
 public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll

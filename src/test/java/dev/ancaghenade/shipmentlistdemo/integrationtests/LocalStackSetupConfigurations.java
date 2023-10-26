@@ -68,7 +68,7 @@ public class LocalStackSetupConfigurations {
 
   @Container
   protected static LocalStackContainer localStack =
-      new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.1.0"))
+      new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.2.0"))
           .withEnv("DEBUG", "1");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalStackSetupConfigurations.class);
@@ -84,7 +84,7 @@ public class LocalStackSetupConfigurations {
   protected static SqsClient sqsClient;
   protected static SnsClient snsClient;
   protected static IamClient iamClient;
-  protected static Logger logger = LoggerFactory.getLogger(ShipmentServiceIntegrationTest.class);
+  protected static Logger logger = LoggerFactory.getLogger(LocalStackSetupConfigurations.class);
   protected static ObjectMapper objectMapper = new ObjectMapper();
   protected static URI localStackEndpoint;
 
