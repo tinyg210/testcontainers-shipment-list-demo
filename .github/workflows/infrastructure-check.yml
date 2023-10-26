@@ -78,9 +78,21 @@ jobs:
         run: |
           curl -s localhost:4566/_localstack/diagnose | gzip -cf > diagnose.json.gz
 
+      - name: State of LocalStack Instance as Cloud Pod
+        if: failure()
+        run: |
+          localstack pod save file:///localstack-state-pod
+
       - name: Upload the Diagnostic Report
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: diagnose.json.gz
           path: ./diagnose.json.gz
+
+      - name: Upload the Cloud Pod
+          if: failure()
+          uses: actions/upload-artifact@v3
+          with:
+            name: localstack-state-pod
+            path: ./localstack-state-pod
