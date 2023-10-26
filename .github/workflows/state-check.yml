@@ -59,13 +59,13 @@ jobs:
 
       - name: Pre-seed environment with Cloud Pod
         run: |
-          localstack pod save file://localstack-state-pod
+          localstack pod load file://localstack-state-pod
 
       - name: Check for Bucket
         run: |
           output=$(awslocal s3api list-buckets --query "Buckets[?contains(Name, 'shipment-picture-bucket')].Name" --output text)
           echo "Waiting for LocalStack Cloud Pod to load..."
-          sleep 15
+          localstack wait -t 10
           if [ -z "$output" ]; then
             echo "Created bucket not found."
             exit 1
