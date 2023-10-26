@@ -65,7 +65,7 @@ jobs:
         run: |
           output=$(awslocal s3api list-buckets --query "Buckets[?contains(Name, 'shipment-picture-bucket')].Name" --output text)
           echo "Waiting for LocalStack Cloud Pod to load..."
-          localstack wait -t 10
+          sleep 15
           if [ -z "$output" ]; then
             echo "Created bucket not found."
             exit 1
