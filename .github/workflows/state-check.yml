@@ -1,4 +1,4 @@
-name: Infrastructure Check
+name: State Check using Cloud Pods
 
 on:
   push:
