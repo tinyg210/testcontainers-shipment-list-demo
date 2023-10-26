@@ -1,0 +1,83 @@
+name: Infrastructure Check
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # “At 00:00 on Sunday.”
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  infrastructure-check:
+    name: Setup infrastructure using Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Maven
+        run: sudo apt-get install -y maven
+
+      - name: Install localstack & awslocal
+        run: |
+          pip install localstack
+          pip install terraform-local
+          pip install awscli-local
+
+      - name: Build project
+        run: |
+          cd shipment-picture-lambda-validator
+          mvn clean package shade:shade
+
+      - name: Start LocalStack
+        run: |
+          docker pull localstack/localstack:latest
+          # Start LocalStack in the background
+          LS_LOG=trace localstack start -d
+          # Wait 10 seconds for the LocalStack container to become ready before timing out
+          echo "Waiting for LocalStack startup..."
+          localstack wait -t 10
+          echo "Startup complete"
+
+      - name: Pre-seed environment with Cloud Pod
+        run: |
+          localstack pod save file://localstack-state-pod
+
+      - name: Check for Bucket
+        run: |
+          output=$(awslocal s3api list-buckets --query "Buckets[?contains(Name, 'shipment-picture-bucket')].Name" --output text)
+          if [ -z "$output" ]; then
+            echo "Created bucket not found."
+            exit 1
+          else echo "Bucket with random name was found: $output"
+          fi
+
+      - name: Generate a Diagnostic Report
+        if: failure()
+        run: |
+          curl -s localhost:4566/_localstack/diagnose | gzip -cf > diagnose.json.gz
+
+      - name: Upload the Diagnostic Report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnose.json.gz
+          path: ./diagnose.json.gz
