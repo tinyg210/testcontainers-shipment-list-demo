@@ -18,6 +18,9 @@ jobs:
   infrastructure-check:
     name: Run Integration tests with Testcontainers
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
