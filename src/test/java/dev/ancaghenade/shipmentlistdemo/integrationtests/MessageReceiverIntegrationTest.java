@@ -20,7 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-@ActiveProfiles("dev")
 public class MessageReceiverIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll
@@ -81,7 +80,7 @@ public class MessageReceiverIntegrationTest extends LocalStackSetupConfiguration
 
     // give the Lambda time to start up and process the image + send the message to SQS
     try {
-      Thread.sleep(5000);
+      Thread.sleep(20000);
 
     } catch (InterruptedException e) {
       e.printStackTrace();

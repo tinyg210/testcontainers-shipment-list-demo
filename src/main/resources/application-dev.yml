@@ -7,5 +7,5 @@ aws:
   dynamodb:
     endpoint: http://localhost.localstack.cloud:4566/
   sqs:
-    endpoint: http://localhost:4566/000000000000
+    endpoint: http://localhost.localstack.cloud:4566/000000000000
   region: us-east-1

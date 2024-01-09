@@ -32,7 +32,6 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@ActiveProfiles("dev")
 public class LambdaIntegrationTest extends LocalStackSetupConfigurations {
 
   @BeforeAll

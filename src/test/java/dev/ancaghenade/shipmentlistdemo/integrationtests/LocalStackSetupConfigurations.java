@@ -68,8 +68,10 @@ public class LocalStackSetupConfigurations {
 
   @Container
   protected static LocalStackContainer localStack =
-      new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.2.0"))
-          .withEnv("DEBUG", "1");
+      new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.0.1"))
+              .withEnv("LOCALSTACK_HOST", "localhost.localstack.cloud")
+              .withEnv("LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT", "60")
+              .withEnv("DEBUG", "1");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalStackSetupConfigurations.class);
   protected static Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(LOGGER);
@@ -264,7 +266,7 @@ public class LocalStackSetupConfigurations {
 
   protected static void createLambdaResources() {
     var functionName = "shipment-picture-lambda-validator";
-    var runtime = "java11";
+    var runtime = "java17";
     var handler = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest";
     var zipFilePath = "shipment-picture-lambda-validator/target/shipment-picture-lambda-validator.jar";
     var sourceArn = "arn:aws:s3:000000000000:" + BUCKET_NAME;

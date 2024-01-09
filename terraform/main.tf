@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "= 4.66.1"
+      version = "= 5.31.0"
     }
   }
 }
@@ -17,6 +17,21 @@ provider "random" {
 resource "random_pet" "random_name" {
   length    = 2
   separator = "-"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  default     = "us-east-1"
+}
+
+variable "account_id" {
+  description = "AWS Account ID"
+  default     = "YOUR_AWS_ACCOUNT_NUMBER"
+}
+
+variable "sns_topic_name" {
+  description = "SNS Topic Name"
+  default     = "update_shipment_picture_topic"
 }
 
 # S3 bucket
@@ -75,7 +90,7 @@ resource "aws_s3_bucket_object" "lambda_code" {
 resource "aws_lambda_function" "shipment_picture_lambda_validator" {
   function_name = "shipment-picture-lambda-validator"
   handler       = "dev.ancaghenade.shipmentpicturelambdavalidator.ServiceHandler::handleRequest"
-  runtime       = "java11"
+  runtime       = "java17"
   role          = aws_iam_role.lambda_exec.arn
   s3_bucket     = aws_s3_bucket.lambda_code_bucket.id
   s3_key        = aws_s3_bucket_object.lambda_code.key
@@ -84,6 +99,8 @@ resource "aws_lambda_function" "shipment_picture_lambda_validator" {
   environment {
     variables = {
       BUCKET = aws_s3_bucket.shipment_picture_bucket.bucket
+      SNS_TOPIC_ARN_DEV = local.sns_topic_arn_dev
+      SNS_TOPIC_ARN_PROD = local.sns_topic_arn_prod
     }
   }
 }
@@ -97,7 +114,7 @@ resource "aws_s3_bucket_notification" "demo_bucket_notification" {
   }
 }
 
-# Give Lambda permission to call S3
+# Give S3 permission to call Lambda
 resource "aws_lambda_permission" "s3_lambda_exec_permission" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
@@ -171,7 +188,7 @@ resource "aws_iam_role_policy" "lambda_exec_policy" {
 
 # Define the topic
 resource "aws_sns_topic" "update_shipment_picture_topic" {
-  name = "update_shipment_picture_topic"
+  name = "${var.sns_topic_name}"
 }
 
 # Define the queue
@@ -219,7 +236,7 @@ resource "aws_sns_topic_subscription" "my_topic_subscription" {
   endpoint  = aws_sqs_queue.update_shipment_picture_queue.arn
 
   # Additional subscription attributes
-#  raw_message_delivery = true
+  #  raw_message_delivery = true
   filter_policy        = ""
   delivery_policy      = ""
 
